@@ -1,18 +1,7 @@
-import { WebSocketServer, WebSocket } from "ws";
+import { WebSocketServer } from "ws";
 import { IncomingMessage } from "http";
 import { deviceStore } from "../state/deviceStore";
-import { WSInbound, WSOutbound } from "../domain/wsProtocol";
-
-let currentVideo = "skyx.mp4";
-
-function broadcast(wss: WebSocketServer, payload: WSOutbound) {
-  const data = JSON.stringify(payload);
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
-    }
-  });
-}
+import { WebSocket } from "ws";
 
 export function setupWebSocket(server: any) {
   const wss = new WebSocketServer({
@@ -24,7 +13,7 @@ export function setupWebSocket(server: any) {
     const ip =
       req.socket.remoteAddress?.replace("::ffff:", "") || "unknown";
 
-    console.log("🔌 Conectado:", ip);
+    console.log("🔌 Cliente conectado:", ip);
 
     deviceStore.add({
       id: ip,
@@ -33,57 +22,19 @@ export function setupWebSocket(server: any) {
       lastSeen: Date.now(),
     });
 
-    // envia estado inicial
-    ws.send(
-      JSON.stringify({
-        type: "load",
-        video: currentVideo,
-      })
-    );
-
-    broadcast(wss, {
-      type: "clients",
-      count: deviceStore.count(),
-    });
-
     ws.on("message", (data) => {
-      const msg = JSON.parse(data.toString()) as WSInbound;
+      const message = data.toString();
+      console.log("📩", ip, "->", message);
+
       const device = deviceStore.get(ip);
-      if (!device) return;
-
-      device.lastSeen = Date.now();
-
-      switch (msg.type) {
-        case "battery":
-          device.battery = msg.level;
-          broadcast(wss, {
-            type: "stat",
-            ip,
-            level: msg.level,
-          });
-          break;
-
-        case "load":
-          currentVideo = msg.video;
-          broadcast(wss, {
-            type: "load",
-            video: currentVideo,
-          });
-          break;
-
-        case "action":
-          broadcast(wss, msg);
-          break;
+      if (device) {
+        device.lastSeen = Date.now();
       }
     });
 
     ws.on("close", () => {
-      console.log("❌ Desconectado:", ip);
+      console.log("❌ Cliente desconectado:", ip);
       deviceStore.remove(ip);
-      broadcast(wss, {
-        type: "clients",
-        count: deviceStore.count(),
-      });
     });
   });
 }

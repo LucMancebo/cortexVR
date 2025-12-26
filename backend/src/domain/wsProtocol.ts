@@ -1,5 +1,13 @@
-// Mensagens que o CLIENTE pode enviar
+// --------------------
+// CLIENT → SERVER
+// --------------------
+
 export type WSInbound =
+  | {
+      type: "hello";
+      role: "panel" | "device";
+      deviceId: string;
+    }
   | {
       type: "battery";
       level: number;
@@ -13,16 +21,20 @@ export type WSInbound =
       action: "play" | "pause" | "stop";
     };
 
-// Mensagens que o SERVIDOR envia
+// --------------------
+// SERVER → CLIENT
+// --------------------
+
 export type WSOutbound =
   | {
-      type: "stat";
-      ip: string;
-      level: number;
+      type: "clients";
+      total: number;
     }
   | {
-      type: "clients";
-      count: number;
+      type: "stat";
+      deviceId: string;
+      level: number;
+      online: boolean;
     }
   | {
       type: "load";
