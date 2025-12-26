@@ -1,0 +1,43 @@
+/* CONTROLES */
+.controls {
+  display: flex;
+  gap: 12px;
+  margin: 15px 0;
+
+  & button {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid #91d8f7;
+    background: transparent;
+    color: #91d8f7;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+
+    img {
+      width: 2rem;
+      height: 2rem;
+    }
+  }
+
+  & button:hover {
+    background: rgba(145, 216, 247, 0.1);
+  }
+
+  & button:active {
+    transform: scale(0.95);
+  }
+
+  /* estados futuros */
+  & button.is-active {
+    background: #91d8f7;
+    color: #111;
+  }
+}
