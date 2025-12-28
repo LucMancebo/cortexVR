@@ -1,40 +1,35 @@
-import { WSMessage } from "../types/ws";
-import { parseMessage } from "./wsParser";
+import { WSOutbound, WSInbound } from "../../../shared/wsProtocol";
+import { deviceId } from "../app/device";
 
 export function connectWebSocket(
-  onMessage: (msg: WSMessage) => void,
-  onStatus: (online: boolean) => void
+  onMessage: (msg: WSOutbound) => void,
+  setStatus: (status: "online" | "offline" | "error") => void
 ) {
-  let ws: WebSocket;
-  let retry = 0;
+  const ws = new WebSocket(`ws://${window.location.hostname}:5000/control`);
 
-  function connect() {
-    ws = new WebSocket(`ws://${location.hostname}:5000/control`);
+  ws.onopen = () => {
+    setStatus("online");
 
-    ws.onopen = () => {
-      retry = 0;
-      onStatus(true);
+    // envia mensagem inicial de registro ("hello")
+    const helloMsg: WSInbound = {
+      type: "hello",
+      deviceId,
+      role: "controller", // central sempre como controller
     };
+    ws.send(JSON.stringify(helloMsg));
+  };
 
-    ws.onclose = () => {
-      onStatus(false);
-      retry++;
-      setTimeout(connect, Math.min(3000 * retry, 10000));
-    };
+  ws.onclose = () => setStatus("offline");
+  ws.onerror = () => setStatus("error");
 
-    ws.onmessage = (event) => {
-      const parsed = parseMessage(event.data);
-      if (parsed) onMessage(parsed);
-    };
-  }
-
-  connect();
-
-  return {
-    send(message: string) {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(message);
-      }
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data) as WSOutbound;
+      onMessage(msg);
+    } catch (error) {
+      console.error("❌ Failed to parse WebSocket message:", error);
     }
   };
+
+  return ws;
 }

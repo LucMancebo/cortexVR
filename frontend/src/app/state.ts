@@ -1,7 +1,10 @@
 export interface DeviceState {
-  level: number;     // bateria
-  lastSeen: number;  // última mensagem recebida
-  online: boolean;   // status atual
+  level?: number;
+  online: boolean;
+  lastSeen: number;
+  role: "controller" | "screen";
 }
+
+
 
 export const devices: Record<string, DeviceState> = {};

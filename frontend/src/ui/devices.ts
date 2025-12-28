@@ -13,9 +13,9 @@ export function renderDevices(devices: Record<string, DeviceState>) {
   }
 
   entries.forEach(([ip, device]) => {
-    const { level, online } = device;
+    const { level = 0, online } = device;
 
-    const color = level > 20 ? "#4caf50" : "#ff5252";
+    const color = level > 40 ? "#4caf50" : "#ff5252";
     const status = online ? "🟢" : "🔴";
     const opacity = online ? 1 : 0.5;
 

@@ -49,7 +49,7 @@ export function renderLayout(root: HTMLElement) {
 
       <footer class="status">
         <span id="status">Status: <div class="status-indicator"></div></span>
-        <span id="connectedClients">| Total: 0</span>
+        <span id="connectedClients">| Conectados: 0</span>
       </footer>
 
     </div>
