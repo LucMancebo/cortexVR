@@ -1,3 +1,2 @@
-"use strict";
-// src/shared/wsProtocol.ts
-Object.defineProperty(exports, "__esModule", { value: true });
+// This file was intentionally left blank to neutralize a build artifact.
+// The true source is wsProtocol.ts

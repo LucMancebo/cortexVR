@@ -1,7 +1,10 @@
+// backend/src/ws/wsServer.ts
 import { WebSocketServer, WebSocket } from "ws";
 import { IncomingMessage } from "http";
 import { deviceStore } from "../state/deviceStore";
-import { WSInbound, WSOutbound } from "../../../shared/wsProtocol";
+import { videoService } from "../services/videoService";
+import { WSInbound, WSOutbound, WSAction } from "../../../shared/wsProtocol";
+import { videoStore } from "../state/videoStore";
 
 export function setupWebSocket(server: any) {
   const wss = new WebSocketServer({
@@ -39,7 +42,7 @@ export function setupWebSocket(server: any) {
             // atualiza contagem de TODOS os devices (central + screens)
             const clientsMsg: WSOutbound = {
               type: "clients",
-              count: deviceStore.count(), // 👈 agora conta todos
+              count: deviceStore.count(),
             };
             deviceStore.broadcast(clientsMsg);
 
@@ -49,6 +52,30 @@ export function setupWebSocket(server: any) {
               ...deviceStore.snapshot(),
             };
             deviceStore.broadcast(snapshotMsg);
+
+            // Envia lista de vídeos para o novo cliente
+            const videos = videoService.list();
+            const videoListMsg: WSOutbound = {
+              type: "video-list",
+              videos: videos.map((v) => ({
+                id: v.id,
+                filename: v.filename,
+                originalName: v.originalName,
+                size: v.size,
+                uploadedAt: v.uploadedAt,
+              })),
+            };
+            ws.send(JSON.stringify(videoListMsg));
+
+            // NOVO: Envia o estado atual do vídeo para o novo cliente
+            const currentVideoState = videoStore.getPlaybackState();
+            const videoStateMsg: WSOutbound = {
+              type: "video-state",
+              videoId: currentVideoState.videoId,
+              action: currentVideoState.action,
+              currentTime: currentVideoState.currentTime,
+            };
+            ws.send(JSON.stringify(videoStateMsg));
             break;
 
           case "battery":
@@ -65,23 +92,55 @@ export function setupWebSocket(server: any) {
             deviceStore.broadcast(stat);
             break;
 
-          case "load":
-            const loadMsg: WSOutbound = {
-              type: "load",
-              video: msg.video,
+          case "video-action":
+            console.log(`🎬 Ação de vídeo recebida de ${msg.deviceId}: ${msg.action}`);
+
+            let newVideoId = msg.videoId !== undefined ? msg.videoId : videoStore.getPlaybackState().videoId;
+            let newAction: WSAction | null = msg.action;
+            let newCurrentTime = msg.currentTime !== undefined
+                ? msg.currentTime
+                : (msg.action === "stop" ? 0 : videoStore.getPlaybackState().currentTime);
+
+            videoStore.setPlaybackState(newVideoId, newAction, newCurrentTime);
+
+            // Broadcast do novo estado do vídeo para todos os clientes
+            const updatedState = videoStore.getPlaybackState();
+            const broadcastVideoStateMsg: WSOutbound = {
+                type: "video-state",
+                videoId: updatedState.videoId,
+                action: updatedState.action,
+                currentTime: updatedState.currentTime,
             };
-            console.log(`📺 Carregar vídeo: ${msg.video}`);
-            deviceStore.broadcast(loadMsg);
+            deviceStore.broadcast(broadcastVideoStateMsg);
             break;
 
-          case "action":
-            const actionMsg: WSOutbound = {
-              type: "action",
-              action: msg.action,
+          case "request-videos":
+            const allVideos = videoService.list();
+            const listMsg: WSOutbound = {
+              type: "video-list",
+              videos: allVideos.map((v) => ({
+                id: v.id,
+                filename: v.filename,
+                originalName: v.originalName,
+                size: v.size,
+                uploadedAt: v.uploadedAt,
+              })),
             };
-            console.log(`🎮 Ação: ${msg.action}`);
-            deviceStore.broadcast(actionMsg);
+            ws.send(JSON.stringify(listMsg));
             break;
+
+          case "request-video-state":
+            const currentVideoStateOnRequest = videoStore.getPlaybackState();
+            const requestedVideoStateMsg: WSOutbound = {
+              type: "video-state",
+              videoId: currentVideoStateOnRequest.videoId,
+              action: currentVideoStateOnRequest.action,
+              currentTime: currentVideoStateOnRequest.currentTime,
+            };
+            ws.send(JSON.stringify(requestedVideoStateMsg));
+            break;
+
+            // Removidos: case "load", case "action", case "video-select"
         }
       } catch (err) {
         console.error("❌ Erro ao parsear mensagem:", err);
@@ -111,4 +170,6 @@ export function setupWebSocket(server: any) {
       }
     });
   });
+
+  return wss;
 }

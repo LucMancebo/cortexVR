@@ -1,26 +1,41 @@
 import { WSOutbound, WSInbound } from "../../../shared/wsProtocol";
 import { deviceId } from "../app/device";
 
+let ws: WebSocket | null = null;
+
+export function sendMessage(message: WSInbound) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(message));
+  } else {
+    console.error("❌ WebSocket is not connected. Cannot send message:", message);
+  }
+}
+
 export function connectWebSocket(
   onMessage: (msg: WSOutbound) => void,
   setStatus: (status: "online" | "offline" | "error") => void
 ) {
-  const ws = new WebSocket(`ws://${window.location.hostname}:5000/control`);
+  ws = new WebSocket(`ws://${window.location.hostname}:5000/control`);
 
   ws.onopen = () => {
     setStatus("online");
 
-    // envia mensagem inicial de registro ("hello")
     const helloMsg: WSInbound = {
       type: "hello",
       deviceId,
-      role: "controller", // central sempre como controller
+      role: "controller",
     };
-    ws.send(JSON.stringify(helloMsg));
+    sendMessage(helloMsg);
   };
 
-  ws.onclose = () => setStatus("offline");
-  ws.onerror = () => setStatus("error");
+  ws.onclose = () => {
+    setStatus("offline");
+    ws = null;
+  };
+  ws.onerror = () => {
+    setStatus("error");
+    ws = null;
+  };
 
   ws.onmessage = (event) => {
     try {
@@ -30,6 +45,11 @@ export function connectWebSocket(
       console.error("❌ Failed to parse WebSocket message:", error);
     }
   };
+}
 
-  return ws;
+export function disconnectWebSocket() {
+  if (ws) {
+    ws.close();
+    ws = null;
+  }
 }

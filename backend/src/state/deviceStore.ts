@@ -1,3 +1,4 @@
+// backend/src/state/deviceStore.ts
 import { WebSocket } from "ws";
 
 export interface Device {

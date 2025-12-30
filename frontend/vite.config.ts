@@ -16,5 +16,9 @@ export default defineConfig({
   server: {
     port: 5173, // porta do dev server (quando usar npm run dev)
     host: "0.0.0.0", // permite acesso pela rede local
+    proxy: {
+      "/api": "http://localhost:5000",   // redireciona chamadas de API para o backend
+      "/videos": "http://localhost:5000" // redireciona acesso aos vídeos
+    }
   },
 });
