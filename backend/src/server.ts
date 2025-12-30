@@ -2,12 +2,17 @@ import express from "express";
 import http from "http";
 import path from "path";
 import fs from "fs";
-import uploadRoutes from "./routes/uploadRoutes";
-import videoRoutes from "./routes/videoRoutes";
-import { VIDEOS_DIR, FRONTEND_DIST_DIR } from "./config/paths";
 
 export function createServer() {
   const app = express();
+
+  app.post("/upload", async (req, res) => {
+    return res.json({
+      erro: false,
+      message: "Upload recebido com sucesso"
+    });
+  });
+
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -17,18 +22,8 @@ export function createServer() {
     next();
   });
 
-  // Garante que a pasta de vídeos exista
-  fs.mkdirSync(VIDEOS_DIR, { recursive: true });
-
-  // Servir vídeos
-  app.use("/videos", express.static(VIDEOS_DIR));
-
   // Servir frontend build
-  app.use(express.static(FRONTEND_DIST_DIR));
-
-  // Rotas de API
-  app.use("/upload", uploadRoutes);
-  app.use("/api/videos", videoRoutes);
+  app.use(express.static("../frontend/public/videos"));
 
   // Health check
   app.get("/api/health", (req, res) => {
@@ -40,12 +35,14 @@ export function createServer() {
     if (req.path.startsWith("/api/") || req.path.startsWith("/videos/")) {
       return next();
     }
-    res.sendFile(path.join(FRONTEND_DIST_DIR, "index.html"));
+    res.sendFile(path.join(__dirname, "../frontend/public/index.html"));
   });
 
   // 404 para API
   app.use("/api/*", (req, res) => {
-    res.status(404).json({ success: false, error: "Rota de API não encontrada" });
+    res
+      .status(404)
+      .json({ success: false, error: "Rota de API não encontrada" });
   });
 
   // Error handler

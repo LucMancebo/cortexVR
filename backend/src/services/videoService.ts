@@ -1,10 +1,10 @@
 import fs from "fs/promises";
 import path from "path";
 import { videoStore, VideoInfo } from "../state/videoStore";
-import { VIDEOS_DIR } from "../config/paths";
+
 
 class VideoService {
-  private videosDir = VIDEOS_DIR;
+  private videosDir = path.join(__dirname, '../../frontend/public/videos');
 
   async save(file: Express.Multer.File): Promise<VideoInfo> {
     const videoId = path.parse(file.filename).name;
