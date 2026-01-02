@@ -17,8 +17,14 @@ export function populateVideoSelector(videos: string[], selectedVideo: string | 
   videos.forEach(video => {
     const option = document.createElement('option');
     option.value = video;
-    // Extrai o nome do arquivo sem a extensão para exibição
-    option.textContent = video.split('.').slice(0, -1).join('.');
+    // Suporta keys de blob do cliente: __clientblob__:timestamp:origName
+    if (video.startsWith('__clientblob__:')) {
+      const parts = video.split(':');
+      option.textContent = parts.slice(2).join(':');
+    } else {
+      // Extrai o nome do arquivo sem a extensão para exibição
+      option.textContent = video.split('.').slice(0, -1).join('.');
+    }
     if (video === selectedVideo) {
       option.selected = true;
     }
@@ -28,7 +34,10 @@ export function populateVideoSelector(videos: string[], selectedVideo: string | 
 
 export function setVideoSource(videoName: string) {
   if (!videoPlayer) return;
-  const videoUrl = `./videos/${videoName}`;
+  // Se o vídeo for um cliente-blob, recupera o blob URL do mapa global
+  // @ts-ignore
+  const clientMap = (window && (window.__CLIENT_VIDEO_MAP__ as Record<string, string>)) || {};
+  const videoUrl = clientMap[videoName] || `./videos/${videoName}`;
   videoPlayer.src = videoUrl;
   videoPlayer.load();
 }

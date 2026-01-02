@@ -95,7 +95,16 @@ export function setupWebSocket(server: any) {
           case "video-action":
             console.log(`🎬 Ação de vídeo recebida de ${msg.deviceId}: ${msg.action}`);
 
-            let newVideoId = msg.videoId !== undefined ? msg.videoId : videoStore.getPlaybackState().videoId;
+            // Se o client enviou um filename (ex.: with extension), tenta mapear para id
+            let incomingVideoId = msg.videoId !== undefined ? msg.videoId : videoStore.getPlaybackState().videoId;
+            if (typeof incomingVideoId === 'string' && incomingVideoId.includes('.')) {
+              const found = videoStore.findByFilename(incomingVideoId);
+              if (found) {
+                incomingVideoId = found.id;
+              }
+            }
+
+            let newVideoId = incomingVideoId;
             let newAction: WSAction | null = msg.action;
             let newCurrentTime = msg.currentTime !== undefined
                 ? msg.currentTime

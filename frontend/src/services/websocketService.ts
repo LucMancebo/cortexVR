@@ -15,7 +15,13 @@ export function connectWebSocket(
   onMessage: (msg: WSOutbound) => void,
   setStatus: (status: "online" | "offline" | "error") => void
 ) {
-  ws = new WebSocket(`ws://${window.location.hostname}:5000/control`);
+  const protocol = (location.protocol === 'https:') ? 'wss' : 'ws';
+  // Use Vite env var if provided, otherwise fallback to 5000
+  // set VITE_WS_PORT in frontend env for different deployments
+  // @ts-ignore
+  const wsPort = (import.meta?.env?.VITE_WS_PORT as string) || '5000';
+  const wsUrl = `${protocol}://${window.location.hostname}:${wsPort}/control`;
+  ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
     setStatus("online");

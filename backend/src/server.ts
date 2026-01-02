@@ -2,28 +2,49 @@ import express from "express";
 import http from "http";
 import path from "path";
 import fs from "fs";
+import videosRouter from "./routes/video";
+import uploadRouter from "./routes/upload";
+import registerUploadRouter from "./routes/registerUpload";
+import { videoService } from "./services/videoService";
+import { deviceStore } from "./state/deviceStore";
+import { WSOutbound } from "../../shared/wsProtocol";
 
 export function createServer() {
   const app = express();
-
-  app.post("/upload", async (req, res) => {
-    return res.json({
-      erro: false,
-      message: "Upload recebido com sucesso"
-    });
-  });
-
+  
+  // Registra rotas separadas
+  app.use(uploadRouter);
+  app.use(registerUploadRouter);
+  app.use(videosRouter);
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  // already registered above
 
   app.use((req, res, next) => {
     console.log(`${req.method} ${req.path}`);
     next();
   });
 
-  // Servir frontend build
-  app.use(express.static("../frontend/public/videos"));
+  // Rota de debug para listar rotas registradas (útil para diagnosticar 404s)
+  app.get('/api/debug/routes', (_req, res) => {
+    try {
+      // @ts-ignore
+      const routes = app._router.stack
+        // filter layers with route info
+        .filter((layer: any) => layer.route)
+        .map((layer: any) => {
+          const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+          return `${methods} ${layer.route.path}`;
+        });
+      res.json({ routes });
+    } catch (err) {
+      res.status(500).json({ error: 'failed to list routes', detail: String(err) });
+    }
+  });
+
+  // Servir vídeos estáticos (pasta frontend/public/videos)
+  app.use("/videos", express.static(path.join(__dirname, "../../frontend/public/videos")));
 
   // Health check
   app.get("/api/health", (req, res) => {
@@ -53,6 +74,8 @@ export function createServer() {
       error: err.message || "Erro interno do servidor",
     });
   });
+
+  
 
   const server = http.createServer(app);
   return server;
